@@ -1,0 +1,33 @@
+{
+  "name": "picora",
+  "version": "1.0.0",
+  "description": "Local photo manager with timeline view",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "concurrently --kill-others \"npm run dev:main\" \"npm run dev:renderer\"",
+    "dev:main": "tsc -p tsconfig.main.json && electron .",
+    "dev:renderer": "vite",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "build": "npm run build:main && npm run build:renderer && electron-builder",
+    "pack": "npm run build:main && npm run build:renderer && electron-builder --dir"
+  },
+  "dependencies": {
+    "exifr": "^7.1.3",
+    "sharp": "^0.33.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.3",
+    "electron-builder": "^24.9.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-window": "^1.8.10",
+    "@types/react-window": "^1.8.8",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
+  }
+}
