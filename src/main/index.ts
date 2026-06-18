@@ -70,15 +70,24 @@ app.whenReady().then(async () => {
   const userDataPath = app.getPath('userData')
 
   // Register picora-asset:// protocol to serve local files
-  // URL format: picora-asset://localhost/absolute/path/to/file.jpg
+  // URL format: picora-asset://localhost/C:/path/to/file.jpg (Windows)
+  //             picora-asset://localhost/path/to/file.jpg (macOS/Linux)
   protocol.handle('picora-asset', (request) => {
     const url = new URL(request.url)
     let filePath = decodeURIComponent(url.pathname)
+
     // On Windows, pathname for C:\... becomes /C:/...
-    // file:// URL needs file:///C:/... (three slashes)
-    if (process.platform === 'win32' && /^\/[A-Za-z]:/.test(filePath)) {
-      filePath = filePath.slice(1) // Remove leading / so file:/// + C:/... works
+    // Also handle backslashes that may appear in encoded paths
+    filePath = filePath.replace(/\\/g, '/')
+
+    if (process.platform === 'win32') {
+      // Remove leading slash before drive letter: /C:/... → C:/...
+      if (/^\/[A-Za-z]:/.test(filePath)) {
+        filePath = filePath.slice(1)
+      }
+      return net.fetch('file:///' + filePath)
     }
+
     return net.fetch('file://' + filePath)
   })
 

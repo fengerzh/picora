@@ -171,7 +171,7 @@ const Viewer: React.FC<ViewerProps> = ({
         <div className="viewer-image-container">
           {fullImagePath ? (
             <img
-              src={`picora-asset://localhost${fullImagePath}`}
+              src={`picora-asset://localhost/${fullImagePath.replace(/\\/g, '/').replace(/^\//, '')}`}
               alt=""
               className={`viewer-image ${imageLoaded ? 'loaded' : ''}`}
               onLoad={() => setImageLoaded(true)}

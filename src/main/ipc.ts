@@ -3,7 +3,7 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { scanFolders } from './scanner'
 import { readExifBatch } from './exif'
-import { generateThumbnailsBatch } from './thumbnail'
+import { getOrGenerateThumbnail } from './thumbnail'
 import { deletePhoto } from './trash'
 import { ConfigManager } from './config'
 import { PhotoIndexer, Photo } from './indexer'
@@ -93,23 +93,8 @@ export function registerIpcHandlers(
 
     await indexer.addPhotos(photos)
 
-    // Phase 4: generate thumbnails in background (don't block the IPC response)
-    const thumbDir = getThumbDir()
-    const photosForThumbs = photos.map((p) => ({ path: p.path, id: p.id }))
-
-    generateThumbnailsBatch(photosForThumbs, thumbDir, config.thumbnailSize, (done, total) => {
-      sendProgress('thumbnails', done, total)
-    }).then(async () => {
-      // Mark thumbnails as generated in the index so the renderer knows to load them
-      await indexer.markThumbnailsGenerated(photosForThumbs.map((p) => p.id))
-      // Notify renderer to refresh photo data
-      const win = getWindow()
-      if (win && !win.isDestroyed()) {
-        win.webContents.send('photos:updated')
-      }
-    }).catch((err) => {
-      console.error('Thumbnail generation failed:', err)
-    })
+    // Thumbnails are now generated on-demand when photos come into view
+    // (see thumbnail:get handler below)
 
     return { photos, total: photos.length }
   })
@@ -146,13 +131,23 @@ export function registerIpcHandlers(
   // ─── Thumbnail ───────────────────────────────────────────────────────────────
 
   ipcMain.handle('thumbnail:get', async (_event, photoId: string) => {
-    const thumbPath = path.join(getThumbDir(), `${photoId}.webp`)
-    try {
-      await fs.access(thumbPath)
-      return thumbPath
-    } catch {
-      return null
+    const photo = indexer.getPhotoById(photoId)
+    if (!photo) return null
+
+    const config = await configManager.load()
+    const thumbPath = await getOrGenerateThumbnail(
+      photoId,
+      photo.path,
+      getThumbDir(),
+      config.thumbnailSize
+    )
+
+    // Mark as generated so the renderer knows to display it
+    if (thumbPath && !photo.thumbGenerated) {
+      await indexer.markThumbnailsGenerated([photoId])
     }
+
+    return thumbPath
   })
 
   // ─── Photo detail ────────────────────────────────────────────────────────────

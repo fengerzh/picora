@@ -26,9 +26,7 @@ const PhotoThumb: React.FC<PhotoThumbProps> = ({
   useEffect(() => {
     let cancelled = false
     const load = async () => {
-      if (!photo.thumbGenerated) {
-        return
-      }
+      // Always request thumbnail — backend will generate on-demand if needed
       try {
         const path = await window.picora.getThumbnailPath(photo.id)
         if (!cancelled) {
@@ -44,7 +42,7 @@ const PhotoThumb: React.FC<PhotoThumbProps> = ({
     return () => {
       cancelled = true
     }
-  }, [photo.id, photo.thumbGenerated])
+  }, [photo.id])
 
   const handleImageLoad = () => setLoaded(true)
 
@@ -87,7 +85,7 @@ const PhotoThumb: React.FC<PhotoThumbProps> = ({
         </div>
       ) : thumbPath ? (
         <img
-          src={`picora-asset://localhost${thumbPath}`}
+          src={`picora-asset://localhost/${thumbPath.replace(/\\/g, '/').replace(/^\//, '')}`}
           alt=""
           className={`thumb-image ${loaded ? 'loaded' : ''}`}
           onLoad={handleImageLoad}

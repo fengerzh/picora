@@ -4,6 +4,7 @@ import * as fs from 'fs/promises'
 
 /**
  * Generates a WebP thumbnail for a single image.
+ * Uses .rotate() to auto-orient based on EXIF data.
  * Returns true on success, false on failure.
  */
 export async function generateThumbnail(
@@ -13,6 +14,7 @@ export async function generateThumbnail(
 ): Promise<boolean> {
   try {
     await sharp(inputPath)
+      .rotate() // auto-orient based on EXIF
       .resize(size, size, { fit: 'cover' })
       .webp({ quality: 80 })
       .toFile(outputPath)
@@ -23,33 +25,28 @@ export async function generateThumbnail(
 }
 
 /**
- * Generates thumbnails for a batch of photos.
- * Processes in groups of 50 and reports progress via the onProgress callback.
+ * Gets the thumbnail path for a photo, generating it on-demand if it doesn't exist.
+ * This enables lazy thumbnail generation — only photos visible on screen get thumbnails.
  */
-export async function generateThumbnailsBatch(
-  photos: Array<{ path: string; id: string }>,
+export async function getOrGenerateThumbnail(
+  photoId: string,
+  photoPath: string,
   thumbDir: string,
-  size: number,
-  onProgress: (done: number, total: number) => void
-): Promise<void> {
-  const BATCH_SIZE = 50
-  const total = photos.length
-  let done = 0
+  size: number
+): Promise<string | null> {
+  const thumbPath = path.join(thumbDir, `${photoId}.webp`)
+
+  // Check if thumbnail already exists
+  try {
+    await fs.access(thumbPath)
+    return thumbPath
+  } catch {
+    // Doesn't exist — generate it now
+  }
 
   // Ensure thumbnail directory exists
   await fs.mkdir(thumbDir, { recursive: true })
 
-  for (let i = 0; i < total; i += BATCH_SIZE) {
-    const batch = photos.slice(i, i + BATCH_SIZE)
-
-    await Promise.all(
-      batch.map(async (photo) => {
-        const outputPath = path.join(thumbDir, `${photo.id}.webp`)
-        await generateThumbnail(photo.path, outputPath, size)
-      })
-    )
-
-    done += batch.length
-    onProgress(done, total)
-  }
+  const success = await generateThumbnail(photoPath, thumbPath, size)
+  return success ? thumbPath : null
 }
