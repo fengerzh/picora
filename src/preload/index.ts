@@ -34,6 +34,22 @@ contextBridge.exposeInMainWorld('picora', {
   // Folder selection
   selectFolder: () => ipcRenderer.invoke('folder:select'),
 
+  // Favorites
+  toggleFavorite: (photoId: string) =>
+    ipcRenderer.invoke('photo:toggleFavorite', photoId),
+  getFavorites: () => ipcRenderer.invoke('photos:favorites'),
+
+  // Face recognition
+  startFaceScan: () => ipcRenderer.invoke('face-scan:start'),
+  cancelFaceScan: () => ipcRenderer.invoke('face-scan:cancel'),
+  getFaceScanStatus: () => ipcRenderer.invoke('face-scan:status'),
+  resetFaceScan: () => ipcRenderer.invoke('face-scan:reset'),
+  getPersons: () => ipcRenderer.invoke('persons:list'),
+  renamePerson: (personId: string, name: string) =>
+    ipcRenderer.invoke('person:rename', personId, name),
+  getPhotosByPerson: (personId: string) =>
+    ipcRenderer.invoke('person:photos', personId),
+
   // Events
   onPhotosUpdated: (callback: () => void) => {
     const handler = () => callback()

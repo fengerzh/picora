@@ -207,4 +207,137 @@ export function registerIpcHandlers(
     }
     return result.filePaths[0]
   })
+
+  // ─── Favorites ───────────────────────────────────────────────────────────────
+
+  ipcMain.handle('photo:toggleFavorite', async (_event, photoId: string) => {
+    return indexer.toggleFavorite(photoId)
+  })
+
+  ipcMain.handle('photos:favorites', async () => {
+    return indexer.getFavorites()
+  })
+
+  // ─── Face Recognition ────────────────────────────────────────────────────────
+
+  let faceScanRunning = false
+  let faceScanCancelled = false
+
+  // Start face scan (batch + resumable)
+  ipcMain.handle('face-scan:start', async () => {
+    if (faceScanRunning) return { error: 'already running' }
+    faceScanRunning = true
+    faceScanCancelled = false
+
+    try {
+      // Load models
+      const modelsPath = app.isPackaged
+        ? path.join(process.resourcesPath, 'models')
+        : path.join(__dirname, '../../resources/models')
+
+      const { loadFaceModels, scanPhoto, clusterFaces, buildPersons } = require('./faceScan')
+      await loadFaceModels(modelsPath)
+
+      const unscanned = indexer.getUnscannedPhotos()
+      const total = unscanned.length
+      let done = 0
+      const BATCH_SIZE = 10
+
+      for (let i = 0; i < unscanned.length; i += BATCH_SIZE) {
+        if (faceScanCancelled) break
+
+        const batch = unscanned.slice(i, i + BATCH_SIZE)
+        for (const photo of batch) {
+          if (faceScanCancelled) break
+
+          // Skip non-image files by extension
+          const ext = path.extname(photo.path).toLowerCase()
+          const supportedExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.heic', '.heif', '.avif']
+          if (!supportedExts.includes(ext)) {
+            try { await indexer.updatePhotoFaces(photo.id, []) } catch {}
+            done++
+            sendProgress('face-scan', done, total)
+            continue
+          }
+
+          try {
+            const result = await scanPhoto(photo.path)
+            try { await indexer.updatePhotoFaces(photo.id, result.faces) } catch (e) {
+              console.error(`[face-scan] Failed to save faces for ${photo.path}:`, e)
+            }
+          } catch (err) {
+            // Silently skip unsupported/broken files
+            // Mark as done to skip them next time
+            try { await indexer.updatePhotoFaces(photo.id, []) } catch (e) {}
+          }
+          done++
+          sendProgress('face-scan', done, total)
+        }
+
+        // Yield to event loop between batches
+        await new Promise((resolve) => setTimeout(resolve, 200))
+      }
+
+      // Re-cluster all faces
+      if (!faceScanCancelled) {
+        const allPhotos = indexer.getIndex()
+        const clusters = clusterFaces(allPhotos, 0.5)
+        const existingPersons = indexer.getPersons()
+        const { persons, updatedPhotos } = buildPersons(allPhotos, clusters, existingPersons)
+        await indexer.updatePersons(persons)
+        // Update photo faces with personIds
+        for (const photo of updatedPhotos) {
+          if (photo.faces) {
+            await indexer.updatePhotoFaces(photo.id, photo.faces)
+          }
+        }
+      }
+
+      faceScanRunning = false
+      return { done, total, cancelled: faceScanCancelled }
+    } catch (err) {
+      faceScanRunning = false
+      console.error('[face-scan] Fatal error:', err)
+      return { error: String(err) }
+    }
+  })
+
+  // Cancel face scan
+  ipcMain.handle('face-scan:cancel', async () => {
+    faceScanCancelled = true
+    return true
+  })
+
+  // Get face scan status
+  ipcMain.handle('face-scan:status', async () => {
+    const unscanned = indexer.getUnscannedPhotos()
+    const total = indexer.getIndex().length
+    return {
+      scanned: total - unscanned.length,
+      total,
+      running: faceScanRunning
+    }
+  })
+
+  // Reset face scan status (force re-scan all photos)
+  ipcMain.handle('face-scan:reset', async () => {
+    await indexer.resetFaceScan()
+    return true
+  })
+
+  // Get all persons
+  ipcMain.handle('persons:list', async () => {
+    return indexer.getPersons()
+  })
+
+  // Rename a person
+  ipcMain.handle('person:rename', async (_event, personId: string, name: string) => {
+    await indexer.renamePerson(personId, name)
+    return true
+  })
+
+  // Get photos by person
+  ipcMain.handle('person:photos', async (_event, personId: string) => {
+    return indexer.getPhotosByPerson(personId)
+  })
 }

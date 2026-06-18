@@ -2,6 +2,15 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as crypto from 'crypto'
 
+export interface FaceData {
+  x: number
+  y: number
+  width: number
+  height: number
+  embedding: number[] // 128-dim face descriptor
+  personId?: string
+}
+
 export interface Photo {
   id: string
   path: string
@@ -9,6 +18,16 @@ export interface Photo {
   width: number
   height: number
   thumbGenerated: boolean
+  favorite?: boolean
+  faceScanStatus?: 'pending' | 'done'
+  faces?: FaceData[]
+}
+
+export interface Person {
+  id: string
+  name?: string // user-assigned name, undefined if not named yet
+  faceCount: number
+  representativePhotoId?: string
 }
 
 export interface PhotoIndex {
@@ -16,6 +35,7 @@ export interface PhotoIndex {
   lastScan: string
   folders: string[]
   photos: Photo[]
+  persons: Person[]
 }
 
 function emptyIndex(): PhotoIndex {
@@ -23,7 +43,8 @@ function emptyIndex(): PhotoIndex {
     version: 1,
     lastScan: new Date().toISOString(),
     folders: [],
-    photos: []
+    photos: [],
+    persons: []
   }
 }
 
@@ -153,6 +174,13 @@ export class PhotoIndexer {
   }
 
   /**
+   * Returns all photos (sorted by dateTaken descending).
+   */
+  getIndex(): Photo[] {
+    return this.index.photos
+  }
+
+  /**
    * Groups photos by year-month (e.g. "2024-03") for the time tree view.
    * Returns a map of "YYYY-MM" → Photo[].
    */
@@ -176,5 +204,93 @@ export class PhotoIndexer {
     }
 
     return groups
+  }
+
+  /**
+   * Toggles the favorite flag on a photo and saves.
+   */
+  async toggleFavorite(id: string): Promise<boolean | null> {
+    const photo = this.index.photos.find((p) => p.id === id)
+    if (!photo) return null
+    photo.favorite = !photo.favorite
+    await this.save(this.index)
+    return photo.favorite
+  }
+
+  /**
+   * Returns all favorite photos, sorted by dateTaken descending.
+   */
+  getFavorites(): Photo[] {
+    return this.index.photos
+      .filter((p) => p.favorite)
+      .sort(
+        (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime()
+      )
+  }
+
+  /**
+   * Returns photos that have not been face-scanned yet.
+   */
+  getUnscannedPhotos(): Photo[] {
+    return this.index.photos.filter((p) => p.faceScanStatus !== 'done')
+  }
+
+  /**
+   * Updates a photo's face scan result and saves.
+   */
+  async updatePhotoFaces(photoId: string, faces: FaceData[]): Promise<void> {
+    const photo = this.index.photos.find((p) => p.id === photoId)
+    if (!photo) return
+    photo.faces = faces
+    photo.faceScanStatus = 'done'
+    await this.save(this.index)
+  }
+
+  /**
+   * Returns all persons.
+   */
+  getPersons(): Person[] {
+    return this.index.persons
+  }
+
+  /**
+   * Updates persons list and saves.
+   */
+  async updatePersons(persons: Person[]): Promise<void> {
+    this.index.persons = persons
+    await this.save(this.index)
+  }
+
+  /**
+   * Renames a person and saves.
+   */
+  async renamePerson(personId: string, name: string): Promise<void> {
+    const person = this.index.persons.find((p) => p.id === personId)
+    if (!person) return
+    person.name = name
+    await this.save(this.index)
+  }
+
+  /**
+   * Resets face scan status for all photos, allowing a full re-scan.
+   */
+  async resetFaceScan(): Promise<void> {
+    for (const photo of this.index.photos) {
+      photo.faceScanStatus = 'pending'
+      photo.faces = undefined
+    }
+    this.index.persons = []
+    await this.save(this.index)
+  }
+
+  /**
+   * Returns photos containing a specific person.
+   */
+  getPhotosByPerson(personId: string): Photo[] {
+    return this.index.photos
+      .filter((p) => p.faces?.some((f) => f.personId === personId))
+      .sort(
+        (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime()
+      )
   }
 }

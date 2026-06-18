@@ -26,8 +26,33 @@ interface PicoraAPI {
   getFullImagePath(photoId: string): Promise<string | null>
   deletePhoto(photoId: string): Promise<boolean>
   selectFolder(): Promise<string | null>
+  toggleFavorite(photoId: string): Promise<boolean | null>
+  getFavorites(): Promise<Photo[]>
+  startFaceScan(): Promise<{ done: number; total: number; cancelled: boolean; error?: string }>
+  cancelFaceScan(): Promise<boolean>
+  getFaceScanStatus(): Promise<{ scanned: number; total: number; running: boolean }>
+  resetFaceScan(): Promise<boolean>
+  getPersons(): Promise<Person[]>
+  renamePerson(personId: string, name: string): Promise<boolean>
+  getPhotosByPerson(personId: string): Promise<Photo[]>
   onPhotosUpdated(callback: () => void): () => void
   onStartupScan(callback: () => void): () => void
+}
+
+interface FaceData {
+  x: number
+  y: number
+  width: number
+  height: number
+  embedding: number[]
+  personId?: string
+}
+
+interface Person {
+  id: string
+  name?: string
+  faceCount: number
+  representativePhotoId?: string
 }
 
 interface Photo {
@@ -37,6 +62,9 @@ interface Photo {
   width: number
   height: number
   thumbGenerated: boolean
+  favorite?: boolean
+  faceScanStatus?: 'pending' | 'done'
+  faces?: FaceData[]
 }
 
 declare global {

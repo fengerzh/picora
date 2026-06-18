@@ -130,6 +130,27 @@ button:disabled {
   color: #111827;
 }
 
+/* Icon button with text label — for elderly users who need text, not just icons */
+.icon-btn-labeled {
+  background: transparent;
+  color: #4b5563;
+  padding: 8px 14px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+}
+.icon-btn-labeled:hover:not(:disabled) {
+  background: #e5e7eb;
+  color: #111827;
+}
+.icon-btn-labeled svg {
+  flex-shrink: 0;
+}
+
 .btn-icon-sm {
   background: transparent;
   color: #9ca3af;
@@ -214,8 +235,14 @@ button:disabled {
 
 .top-bar-left {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
+}
+.app-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 .app-title {
   font-size: 22px;
@@ -224,6 +251,61 @@ button:disabled {
 }
 .photo-count {
   font-size: 14px;
+  color: #6b7280;
+}
+
+.top-bar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f4f6;
+  border-radius: 20px;
+  padding: 8px 16px;
+  width: 100%;
+  max-width: 360px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.search-box:focus-within {
+  background: #fff;
+  box-shadow: 0 0 0 2px #2563eb;
+}
+.search-icon {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+.search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  color: #1a1a1a;
+  font-family: inherit;
+}
+.search-box input::placeholder {
+  color: #9ca3af;
+}
+.search-clear {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  min-height: 28px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.search-clear:hover {
+  background: #e5e7eb;
   color: #6b7280;
 }
 
@@ -242,7 +324,7 @@ button:disabled {
 .sidebar {
   width: 210px;
   flex-shrink: 0;
-  background: #fff;
+  background: #fafafa;
   border-right: 1px solid #e5e7eb;
   overflow-y: auto;
 }
@@ -278,7 +360,7 @@ button:disabled {
 }
 .time-tree-header {
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #9ca3af;
   text-transform: uppercase;
@@ -298,9 +380,9 @@ button:disabled {
   width: 100%;
   padding: 10px 16px;
   background: transparent;
-  min-height: 40px;
+  min-height: 44px;
   border-radius: 0;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
   color: #111827;
   text-align: left;
@@ -325,7 +407,7 @@ button:disabled {
   flex: 1;
 }
 .year-count {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 400;
   color: #9ca3af;
 }
@@ -338,9 +420,9 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px 8px 20px;
+  padding: 10px 16px 10px 20px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 17px;
   color: #374151;
   border-radius: 6px;
   margin: 1px 8px;
@@ -350,19 +432,34 @@ button:disabled {
   background: #f3f4f6;
 }
 .month-item.active {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #eff6ff;
+  color: #2563eb;
   font-weight: 600;
 }
 .month-label {
   flex: 1;
 }
 .month-count {
-  font-size: 13px;
-  color: #9ca3af;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #e5e7eb;
+  border-radius: 10px;
+  padding: 2px 10px;
+  min-width: 28px;
+  text-align: center;
 }
 .month-item.active .month-count {
-  color: #60a5fa;
+  background: #2563eb;
+  color: #fff;
+}
+
+/* "All Photos" entry at top of time tree */
+.all-photos-item {
+  font-weight: 600;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 6px 6px 0 0;
 }
 
 /* ============================================================
@@ -396,18 +493,26 @@ button:disabled {
 .month-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 20px;
+  gap: 10px;
+  padding: 14px 20px 10px;
 }
-.month-divider-line {
-  flex: 1;
-  height: 1px;
-  background: #e5e7eb;
+.month-divider-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2563eb;
+  flex-shrink: 0;
 }
 .month-divider-label {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+}
+.month-divider-count {
   font-size: 14px;
-  font-weight: 600;
-  color: #6b7280;
+  font-weight: 500;
+  color: #9ca3af;
   white-space: nowrap;
 }
 
@@ -415,7 +520,7 @@ button:disabled {
 .photo-thumb {
   width: 200px;
   height: 200px;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   position: relative;
@@ -430,6 +535,21 @@ button:disabled {
 .photo-thumb:focus-visible {
   outline: 3px solid #3b82f6;
   outline-offset: 2px;
+}
+
+/* Selected state in batch mode */
+.photo-thumb.selected {
+  box-shadow: 0 0 0 3px #2563eb, 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.photo-thumb.batch-mode {
+  cursor: pointer;
+}
+.photo-thumb.batch-mode:hover {
+  transform: none;
+  box-shadow: 0 0 0 2px #93c5fd;
+}
+.photo-thumb.batch-mode.selected:hover {
+  box-shadow: 0 0 0 3px #2563eb, 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .thumb-image {
@@ -469,6 +589,158 @@ button:disabled {
   animation: spin 0.8s linear infinite;
 }
 
+/* Hover info bar showing date */
+.thumb-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 20px 10px 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  border-radius: 0 0 12px 12px;
+}
+.photo-thumb:hover .thumb-info {
+  opacity: 1;
+}
+
+/* Favorite heart button on thumbnail */
+.thumb-favorite {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: none;
+  padding: 6px;
+  min-height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.15s ease;
+  z-index: 5;
+}
+.photo-thumb:hover .thumb-favorite {
+  opacity: 1;
+}
+.thumb-favorite:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+.thumb-favorite.active {
+  opacity: 1;
+  color: #ff2d55;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Favorites entry in sidebar */
+.sidebar-favorites {
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+.favorites-item {
+  margin: 1px 8px;
+}
+
+/* --- Person View --- */
+.person-view {
+  padding: 20px;
+}
+.person-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.person-view-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+.face-scan-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: #6b7280;
+}
+.face-scan-buttons {
+  display: flex;
+  gap: 8px;
+}
+.person-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 20px;
+}
+.person-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.person-card:hover {
+  background: #f3f4f6;
+}
+.person-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+}
+.person-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+  text-align: center;
+}
+.person-name-edit input {
+  font-size: 17px;
+  padding: 4px 8px;
+  border: 2px solid #2563eb;
+  border-radius: 6px;
+  text-align: center;
+  width: 120px;
+  outline: none;
+}
+.person-count {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+.person-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6b7280;
+  font-size: 18px;
+}
+.person-list-empty .subtext {
+  font-size: 15px;
+  color: #9ca3af;
+  margin-top: 8px;
+}
+
 /* --- Context menu --- */
 .context-menu {
   position: fixed;
@@ -479,6 +751,31 @@ button:disabled {
   padding: 4px;
   z-index: 1000;
   min-width: 120px;
+}
+
+/* Batch action bar */
+.batch-action-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 12px 20px;
+  z-index: 100;
+}
+.batch-count {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+.batch-actions {
+  display: flex;
+  gap: 8px;
 }
 .context-menu-item {
   display: block;

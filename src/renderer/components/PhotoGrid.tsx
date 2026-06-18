@@ -10,19 +10,22 @@ interface PhotoGridProps {
   onActiveMonthChange: (year: number, month: number) => void
   scrollTarget: { year: number; month: number } | null
   onScrollComplete: () => void
+  onToggleFavorite: (photoId: string) => void
+  onPhotosDeleted: () => void
 }
 
 interface RowItem {
   type: 'divider' | 'row'
   year?: number
   month?: number
+  photoCount?: number
   photos?: Photo[]
   rowStartIndex: number
 }
 
 const THUMB_SIZE = 200
 const ROW_HEIGHT = 220
-const DIVIDER_HEIGHT = 40
+const DIVIDER_HEIGHT = 48
 const GAP = 8
 
 const PhotoGrid: React.FC<PhotoGridProps> = ({
@@ -30,7 +33,9 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
   onPhotoClick,
   onActiveMonthChange,
   scrollTarget,
-  onScrollComplete
+  onScrollComplete,
+  onToggleFavorite,
+  onPhotosDeleted
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<List>(null)
@@ -42,6 +47,8 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
     photo: Photo
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [batchDeleteMode, setBatchDeleteMode] = useState(false)
   // Suppress onActiveMonthChange during programmatic scroll
   const scrollLockRef = useRef(false)
 
@@ -72,6 +79,14 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
 
     const flushBatch = () => {
       if (currentBatch.length > 0) {
+        // Add divider for this month with photo count
+        items.push({
+          type: 'divider',
+          year: currentYear,
+          month: currentMonth,
+          photoCount: currentBatch.length,
+          rowStartIndex: batchStartIndex
+        })
         // Split batch into rows of `cols`
         for (let i = 0; i < currentBatch.length; i += cols) {
           const rowPhotos = currentBatch.slice(i, i + cols)
@@ -92,15 +107,6 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
 
       if (y !== currentYear || m !== currentMonth) {
         flushBatch()
-        if (currentYear !== -1) {
-          // Add divider
-          items.push({
-            type: 'divider',
-            year: y,
-            month: m,
-            rowStartIndex: idx
-          })
-        }
         currentYear = y
         currentMonth = m
         batchStartIndex = idx
@@ -152,17 +158,22 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
   const handleItemsRendered = useCallback(
     ({ visibleStartIndex }: { visibleStartIndex: number }) => {
       if (scrollLockRef.current) return
-      // Scan backward from visibleStartIndex to find the nearest preceding divider
-      for (let i = visibleStartIndex; i >= 0; i--) {
+      if (rowItems.length === 0) return
+      // Clamp index to valid range
+      const startIndex = Math.min(visibleStartIndex, rowItems.length - 1)
+      // Scan backward from startIndex to find the nearest preceding divider
+      for (let i = startIndex; i >= 0; i--) {
         const item = rowItems[i]
+        if (!item) continue
         if (item.type === 'divider' && item.year && item.month) {
           onActiveMonthChange(item.year, item.month)
           return
         }
       }
       // If no divider found above, scan forward
-      for (let i = visibleStartIndex; i < rowItems.length; i++) {
+      for (let i = startIndex; i < rowItems.length; i++) {
         const item = rowItems[i]
+        if (!item) continue
         if (item.type === 'divider' && item.year && item.month) {
           onActiveMonthChange(item.year, item.month)
           return
@@ -204,7 +215,43 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
     if (deleteTarget) {
       await window.picora.deletePhoto(deleteTarget.id)
       setDeleteTarget(null)
+      onPhotosDeleted()
     }
+  }
+
+  // Multi-select handling
+  const handlePhotoSelect = (photo: Photo, e: React.MouseEvent) => {
+    if (!batchDeleteMode && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+      onPhotoClick(photo)
+      return
+    }
+    // Enter batch mode
+    if (!batchDeleteMode) {
+      setBatchDeleteMode(true)
+    }
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(photo.id)) {
+        next.delete(photo.id)
+      } else {
+        next.add(photo.id)
+      }
+      return next
+    })
+  }
+
+  const handleExitBatchMode = () => {
+    setBatchDeleteMode(false)
+    setSelectedIds(new Set())
+  }
+
+  const handleBatchDelete = async () => {
+    const ids = Array.from(selectedIds)
+    for (const id of ids) {
+      await window.picora.deletePhoto(id)
+    }
+    handleExitBatchMode()
+    onPhotosDeleted()
   }
 
   const RowRenderer = useCallback(
@@ -215,7 +262,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
       if (item.type === 'divider') {
         return (
           <div style={style}>
-            <MonthDivider year={item.year!} month={item.month!} />
+            <MonthDivider year={item.year!} month={item.month!} photoCount={item.photoCount} />
           </div>
         )
       }
@@ -226,15 +273,20 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
             <PhotoThumb
               key={photo.id}
               photo={photo}
-              onClick={() => onPhotoClick(photo)}
-              onDoubleClick={() => onPhotoClick(photo)}
+              selected={selectedIds.has(photo.id)}
+              batchMode={batchDeleteMode}
+              onClick={(e) => handlePhotoSelect(photo, e)}
+              onDoubleClick={() => {
+                if (!batchDeleteMode) onPhotoClick(photo)
+              }}
               onContextMenu={(e) => handleContextMenu(e, photo)}
+              onToggleFavorite={onToggleFavorite}
             />
           ))}
         </div>
       )
     },
-    [rowItems, onPhotoClick]
+    [rowItems, onPhotoClick, onToggleFavorite, selectedIds, batchDeleteMode]
   )
 
   return (
@@ -274,6 +326,29 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+
+      {batchDeleteMode && (
+        <div className="batch-action-bar">
+          <span className="batch-count">
+            已选择 {selectedIds.size} 张照片
+          </span>
+          <div className="batch-actions">
+            <button
+              className="btn-secondary"
+              onClick={handleExitBatchMode}
+            >
+              取消
+            </button>
+            <button
+              className="btn-danger"
+              onClick={handleBatchDelete}
+              disabled={selectedIds.size === 0}
+            >
+              删除所选
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

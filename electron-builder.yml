@@ -5,9 +5,14 @@ directories:
 files:
   - dist/**/*
   - package.json
+extraResources:
+  - from: resources/models
+    to: models
+  - from: resources/icon.png
+    to: icon.png
 win:
   target: nsis
-  icon: resources/icon.ico
+  icon: resources/icon.png
 nsis:
   oneClick: true
   perMachine: true

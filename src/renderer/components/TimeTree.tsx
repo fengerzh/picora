@@ -5,6 +5,8 @@ interface TimeTreeProps {
   data: MonthData[]
   activeMonth: { year: number; month: number } | null
   onMonthClick: (year: number, month: number) => void
+  totalCount: number
+  onShowAll: () => void
 }
 
 const MONTH_NAMES = [
@@ -12,7 +14,7 @@ const MONTH_NAMES = [
   '7月', '8月', '9月', '10月', '11月', '12月'
 ]
 
-const TimeTree: React.FC<TimeTreeProps> = ({ data, activeMonth, onMonthClick }) => {
+const TimeTree: React.FC<TimeTreeProps> = ({ data, activeMonth, onMonthClick, totalCount, onShowAll }) => {
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set())
   const activeRef = useRef<HTMLDivElement>(null)
 
@@ -59,6 +61,13 @@ const TimeTree: React.FC<TimeTreeProps> = ({ data, activeMonth, onMonthClick }) 
     <div className="time-tree">
       <div className="time-tree-header">时间线</div>
       <div className="time-tree-list">
+        <div
+          className={`month-item all-photos-item ${!activeMonth ? 'active' : ''}`}
+          onClick={onShowAll}
+        >
+          <span className="month-label">全部照片</span>
+          <span className="month-count">{totalCount}</span>
+        </div>
         {sortedData.map((yearData) => {
           const isExpanded = expandedYears.has(yearData.year)
           const totalForYear = yearData.months.reduce(
@@ -102,7 +111,7 @@ const TimeTree: React.FC<TimeTreeProps> = ({ data, activeMonth, onMonthClick }) 
                         <span className="month-label">
                           {MONTH_NAMES[m.month - 1]}
                         </span>
-                        <span className="month-count">({m.count})</span>
+                        <span className="month-count">{m.count}</span>
                       </div>
                     )
                   })}

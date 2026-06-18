@@ -7,6 +7,22 @@ import { registerIpcHandlers, setMainWindow } from './ipc'
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
+// Set app name early so macOS Dock, menu bar, and window title all show "Picora"
+// instead of the default "Electron" in dev mode
+app.setName('Picora')
+
+// Set app icon for dev mode (electron-builder handles this for packaged builds)
+const iconPath = path.join(__dirname, '../../resources/icon.png')
+
+// On macOS, set the Dock icon explicitly for dev mode
+if (process.platform === 'darwin' && isDev && app.dock) {
+  try {
+    app.dock.setIcon(iconPath)
+  } catch (e) {
+    // ignore if icon not found
+  }
+}
+
 // Register custom protocol scheme as privileged (must be before app.ready)
 protocol.registerSchemesAsPrivileged([
   { scheme: 'picora-asset', privileges: { standard: true, secure: true, supportFetchAPI: true } }
@@ -27,6 +43,8 @@ function createWindow(): BrowserWindow {
     height: 800,
     minWidth: 900,
     minHeight: 600,
+    title: 'Picora',
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -111,4 +129,12 @@ app.on('activate', () => {
 // Quit when window is closed
 app.on('window-all-closed', () => {
   app.quit()
+})
+
+// Prevent WASM Aborted() from killing the process silently
+process.on('uncaughtException', (err) => {
+  console.error('[main] Uncaught exception:', err)
+})
+process.on('unhandledRejection', (err) => {
+  console.error('[main] Unhandled rejection:', err)
 })

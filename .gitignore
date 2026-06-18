@@ -14,3 +14,6 @@ Thumbs.db
 
 # Intermediate files
 picora_clean.png
+
+# Face recognition model weights (download separately)
+resources/models/
