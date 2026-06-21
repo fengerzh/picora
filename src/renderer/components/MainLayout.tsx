@@ -13,7 +13,6 @@ interface MainLayoutProps {
   isScanning: boolean
   scanProgress: { phase: string; done: number; total: number } | null
   onPhotoClick: (photo: Photo) => void
-  onLoadPage: (page: number) => void
   onRefresh: () => void
   onOpenSettings: () => void
   onRescan: () => void
@@ -27,7 +26,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   isScanning,
   scanProgress,
   onPhotoClick,
-  onLoadPage,
   onRefresh,
   onOpenSettings,
   onRescan,

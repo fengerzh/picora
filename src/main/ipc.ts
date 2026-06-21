@@ -101,6 +101,10 @@ export function registerIpcHandlers(
 
   // ─── Photos ──────────────────────────────────────────────────────────────────
 
+  ipcMain.handle('photos:all', async () => {
+    return indexer.getAllPhotos()
+  })
+
   ipcMain.handle('photos:get', async (_event, page: number, pageSize: number) => {
     return indexer.getPhotos(page, pageSize)
   })

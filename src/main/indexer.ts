@@ -147,6 +147,16 @@ export class PhotoIndexer {
   }
 
   /**
+   * Returns ALL photos sorted by dateTaken descending (no pagination).
+   * Suitable for the timeline view where the virtual scroll handles rendering.
+   */
+  getAllPhotos(): Photo[] {
+    return [...this.index.photos].sort(
+      (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime()
+    )
+  }
+
+  /**
    * Returns the total number of indexed photos.
    */
   getPhotoCount(): number {

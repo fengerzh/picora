@@ -14,6 +14,7 @@ interface PicoraAPI {
   onScanProgress(
     callback: (progress: { phase: string; done: number; total: number }) => void
   ): () => void
+  getAllPhotos(): Promise<Photo[]>
   getPhotos(
     page: number,
     pageSize: number

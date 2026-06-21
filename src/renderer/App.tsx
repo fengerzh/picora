@@ -27,7 +27,6 @@ const App: React.FC = () => {
     totalCount,
     photosByMonth,
     loading,
-    loadPage,
     refresh,
     deletePhoto
   } = usePhotos()
@@ -182,7 +181,6 @@ const App: React.FC = () => {
           isScanning={isScanning}
           scanProgress={scanProgress}
           onPhotoClick={handlePhotoClick}
-          onLoadPage={loadPage}
           onRefresh={refresh}
           onOpenSettings={handleOpenSettings}
           onRescan={handleStartScan}
