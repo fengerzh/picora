@@ -15,6 +15,7 @@ interface PicoraAPI {
     callback: (progress: { phase: string; done: number; total: number }) => void
   ): () => void
   getAllPhotos(): Promise<Photo[]>
+  getPhotosWithLocation(): Promise<Photo[]>
   getPhotos(
     page: number,
     pageSize: number
@@ -63,6 +64,8 @@ interface Photo {
   width: number
   height: number
   thumbGenerated: boolean
+  latitude?: number
+  longitude?: number
   favorite?: boolean
   faceScanStatus?: 'pending' | 'done'
   faces?: FaceData[]

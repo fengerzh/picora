@@ -18,6 +18,8 @@ export interface Photo {
   width: number
   height: number
   thumbGenerated: boolean
+  latitude?: number
+  longitude?: number
   favorite?: boolean
   faceScanStatus?: 'pending' | 'done'
   faces?: FaceData[]

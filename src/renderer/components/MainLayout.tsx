@@ -3,6 +3,7 @@ import TimeTree from './TimeTree'
 import PhotoGrid from './PhotoGrid'
 import ScanProgress from './ScanProgress'
 import PersonList from './PersonList'
+import MapView from './MapView'
 import type { MonthData } from '../hooks/usePhotos'
 import appIcon from '../assets/icon.png'
 
@@ -43,6 +44,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   const [showFavoritesOnly, setShowFavoritesOnly] = React.useState(false)
   const [favoriteIds, setFavoriteIds] = React.useState<Set<string>>(new Set())
   const [showPersons, setShowPersons] = React.useState(false)
+  const [showMap, setShowMap] = React.useState(false)
   const [persons, setPersons] = React.useState<Person[]>([])
   const [personPhotos, setPersonPhotos] = React.useState<Photo[] | null>(null)
   const [faceScanStatus, setFaceScanStatus] = React.useState<{ scanned: number; total: number; running: boolean } | null>(null)
@@ -118,6 +120,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     setScrollTarget(null)
     setShowFavoritesOnly(false)
     setShowPersons(false)
+    setShowMap(false)
     setPersonPhotos(null)
     // Scroll photo grid to top
     const grid = document.querySelector('.photo-grid-list')
@@ -139,11 +142,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
   const handleShowPersons = React.useCallback(async () => {
     setShowFavoritesOnly(false)
+    setShowMap(false)
     setActiveMonth(null)
     setPersonPhotos(null)
     setShowPersons(true)
     await loadPersons()
   }, [loadPersons])
+
+  const handleShowMap = React.useCallback(() => {
+    setShowFavoritesOnly(false)
+    setShowPersons(false)
+    setPersonPhotos(null)
+    setActiveMonth(null)
+    setShowMap(true)
+  }, [])
 
   const handlePersonClick = React.useCallback(async (personId: string) => {
     try {
@@ -312,6 +324,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                 setShowFavoritesOnly(!showFavoritesOnly)
                 setActiveMonth(null)
                 setShowPersons(false)
+                setShowMap(false)
                 setPersonPhotos(null)
               }}
             >
@@ -338,6 +351,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({
               </span>
               <span className="month-count">{persons?.length ?? 0}</span>
             </div>
+            <div
+              className={`month-item favorites-item ${showMap ? 'active' : ''}`}
+              onClick={handleShowMap}
+            >
+              <span className="month-label">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill={showMap ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: '6px' }}>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                地图
+              </span>
+            </div>
           </div>
           <TimeTree
             data={photosByMonth}
@@ -345,12 +370,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             onMonthClick={(year, month) => {
               setShowFavoritesOnly(false)
               setShowPersons(false)
+              setShowMap(false)
               setPersonPhotos(null)
               handleMonthClick(year, month)
             }}
             totalCount={totalCount}
             onShowAll={() => {
               setShowFavoritesOnly(false)
+              setShowMap(false)
               handleShowAll()
             }}
           />
@@ -369,6 +396,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                 打开设置
               </button>
             </div>
+          ) : showMap ? (
+            <MapView onPhotoClick={onPhotoClick} />
           ) : showPersons && personPhotos ? (
             <PhotoGrid
               photos={personPhotos}

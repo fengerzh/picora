@@ -38,22 +38,25 @@ export async function readExifDate(filePath: string): Promise<Date | null> {
 }
 
 /**
- * Reads EXIF data (date, dimensions) from a batch of image files.
+ * Reads EXIF data (date, dimensions, GPS) from a batch of image files.
  */
 export async function readExifBatch(
   filePaths: string[]
-): Promise<Array<{ path: string; dateTaken: Date; width: number; height: number }>> {
-  const results: Array<{ path: string; dateTaken: Date; width: number; height: number }> = []
+): Promise<Array<{ path: string; dateTaken: Date; width: number; height: number; latitude?: number; longitude?: number }>> {
+  const results: Array<{ path: string; dateTaken: Date; width: number; height: number; latitude?: number; longitude?: number }> = []
 
   for (const filePath of filePaths) {
     let dateTaken: Date
     let width = 0
     let height = 0
+    let latitude: number | undefined
+    let longitude: number | undefined
 
     try {
       const exifData = await exifr.parse(filePath, {
         tiff: true,
-        exif: true
+        exif: true,
+        gps: true
       })
 
       // Extract date
@@ -71,6 +74,12 @@ export async function readExifBatch(
       // Extract dimensions
       width = exifData?.ImageWidth ?? exifData?.ExifImageWidth ?? 0
       height = exifData?.ImageHeight ?? exifData?.ExifImageHeight ?? 0
+
+      // Extract GPS coordinates (exifr returns them as numbers when gps: true)
+      if (exifData?.latitude != null && exifData?.longitude != null) {
+        latitude = exifData.latitude
+        longitude = exifData.longitude
+      }
     } catch {
       // On any failure fall back to mtime and zero dimensions
       try {
@@ -81,7 +90,7 @@ export async function readExifBatch(
       }
     }
 
-    results.push({ path: filePath, dateTaken, width, height })
+    results.push({ path: filePath, dateTaken, width, height, latitude, longitude })
   }
 
   return results

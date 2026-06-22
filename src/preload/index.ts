@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('picora', {
 
   // Photos
   getAllPhotos: () => ipcRenderer.invoke('photos:all'),
+  getPhotosWithLocation: () => ipcRenderer.invoke('photos:withLocation'),
   getPhotos: (page: number, pageSize: number) =>
     ipcRenderer.invoke('photos:get', page, pageSize),
   getPhotoCount: () => ipcRenderer.invoke('photos:count'),

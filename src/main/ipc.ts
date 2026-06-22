@@ -88,7 +88,9 @@ export function registerIpcHandlers(
       dateTaken: result.dateTaken.toISOString(),
       width: result.width,
       height: result.height,
-      thumbGenerated: false
+      thumbGenerated: false,
+      latitude: result.latitude,
+      longitude: result.longitude
     }))
 
     await indexer.addPhotos(photos)
@@ -103,6 +105,12 @@ export function registerIpcHandlers(
 
   ipcMain.handle('photos:all', async () => {
     return indexer.getAllPhotos()
+  })
+
+  ipcMain.handle('photos:withLocation', async () => {
+    return indexer.getAllPhotos().filter(
+      (p) => p.latitude != null && p.longitude != null
+    )
   })
 
   ipcMain.handle('photos:get', async (_event, page: number, pageSize: number) => {
