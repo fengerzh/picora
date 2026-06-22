@@ -1202,3 +1202,17 @@ button:disabled {
 .map-empty svg {
   margin-bottom: 4px;
 }
+
+/* Dot marker fallback for photos without generated thumbnails */
+.map-dot-marker {
+  background: none !important;
+  border: none !important;
+}
+.map-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
