@@ -32,24 +32,83 @@ let mainWindow: BrowserWindow | null = null
 let configManager: ConfigManager
 let indexer: PhotoIndexer
 
+// ─── Window state persistence ──────────────────────────────────────────────────
+
+interface WindowState {
+  x?: number
+  y?: number
+  width: number
+  height: number
+  isMaximized: boolean
+}
+
+function windowStatePath(): string {
+  return path.join(app.getPath('userData'), 'window-state.json')
+}
+
+async function loadWindowState(): Promise<WindowState> {
+  try {
+    const data = await fs.readFile(windowStatePath(), 'utf-8')
+    return JSON.parse(data) as WindowState
+  } catch {
+    return { width: 1200, height: 800, isMaximized: false }
+  }
+}
+
+async function saveWindowState(win: BrowserWindow): Promise<void> {
+  const maximized = win.isMaximized()
+  const bounds = maximized ? win.getNormalBounds() : win.getBounds()
+  const state: WindowState = {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    isMaximized: maximized
+  }
+  try {
+    await fs.writeFile(windowStatePath(), JSON.stringify(state, null, 2), 'utf-8')
+  } catch {
+    // Ignore write errors
+  }
+}
+
+// ─── End window state ──────────────────────────────────────────────────────────
+
 async function ensureThumbDir(): Promise<void> {
   const thumbDir = path.join(app.getPath('userData'), 'thumbnails')
   await fs.mkdir(thumbDir, { recursive: true })
 }
 
+let cachedWindowState: WindowState | null = null
+
 function createWindow(): BrowserWindow {
+  const state = cachedWindowState || { width: 1200, height: 800, isMaximized: false }
+
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    x: state.x,
+    y: state.y,
+    width: state.width,
+    height: state.height,
     minWidth: 900,
     minHeight: 600,
     title: 'Picora',
     icon: iconPath,
+    show: false, // Don't show until ready to avoid flash
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
+  })
+
+  // Restore maximized state after window is created
+  if (state.isMaximized) {
+    win.maximize()
+  }
+
+  // Show window once ready
+  win.once('ready-to-show', () => {
+    win.show()
   })
 
   if (isDev) {
@@ -58,6 +117,13 @@ function createWindow(): BrowserWindow {
   } else {
     win.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+
+  // Save state on move, resize, maximize, unmaximize
+  const save = () => saveWindowState(win)
+  win.on('resize', save)
+  win.on('move', save)
+  win.on('maximize', save)
+  win.on('unmaximize', save)
 
   win.on('closed', () => {
     mainWindow = null
@@ -101,6 +167,9 @@ app.whenReady().then(async () => {
   // Ensure thumbnails directory exists
   await ensureThumbDir()
 
+  // Load saved window state (position, size, maximized)
+  cachedWindowState = await loadWindowState()
+
   // Create the main window
   mainWindow = createWindow()
 
@@ -127,8 +196,9 @@ app.whenReady().then(async () => {
 })
 
 // macOS: re-create window when dock icon is clicked and no other windows are open
-app.on('activate', () => {
+app.on('activate', async () => {
   if (BrowserWindow.getAllWindows().length === 0) {
+    cachedWindowState = await loadWindowState()
     mainWindow = createWindow()
     // Update the window reference so IPC handlers target the new window
     setMainWindow(mainWindow)
