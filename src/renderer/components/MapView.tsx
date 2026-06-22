@@ -150,7 +150,7 @@ const MapView: React.FC<MapViewProps> = ({ onPhotoClick }) => {
       >
         <TileLayer
           attribution='&copy; 高德地图'
-          url="https://webrd0{s}.is.autonavi.com/appmaptile?style=7&x={x}&y={y}&z={z}"
+          url="https://wprd0{s}.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=7"
           subdomains={['1', '2', '3', '4']}
         />
         <FitBounds positions={positions} />
