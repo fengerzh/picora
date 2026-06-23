@@ -38,12 +38,25 @@ export async function readExifDate(filePath: string): Promise<Date | null> {
 }
 
 /**
- * Reads EXIF data (date, dimensions, GPS) from a batch of image files.
+ * Reads EXIF data (date, dimensions, GPS, camera info) from a batch of image files.
  */
-export async function readExifBatch(
-  filePaths: string[]
-): Promise<Array<{ path: string; dateTaken: Date; width: number; height: number; latitude?: number; longitude?: number }>> {
-  const results: Array<{ path: string; dateTaken: Date; width: number; height: number; latitude?: number; longitude?: number }> = []
+export interface ExifResult {
+  path: string
+  dateTaken: Date
+  width: number
+  height: number
+  latitude?: number
+  longitude?: number
+  make?: string
+  model?: string
+  fNumber?: number
+  exposureTime?: number
+  iso?: number
+  focalLength?: number
+}
+
+export async function readExifBatch(filePaths: string[]): Promise<ExifResult[]> {
+  const results: ExifResult[] = []
 
   for (const filePath of filePaths) {
     let dateTaken: Date
@@ -51,6 +64,12 @@ export async function readExifBatch(
     let height = 0
     let latitude: number | undefined
     let longitude: number | undefined
+    let make: string | undefined
+    let model: string | undefined
+    let fNumber: number | undefined
+    let exposureTime: number | undefined
+    let iso: number | undefined
+    let focalLength: number | undefined
 
     try {
       const exifData = await exifr.parse(filePath, {
@@ -80,6 +99,14 @@ export async function readExifBatch(
         latitude = exifData.latitude
         longitude = exifData.longitude
       }
+
+      // Extract camera info
+      make = exifData?.Make ?? undefined
+      model = exifData?.Model ?? undefined
+      fNumber = exifData?.FNumber ?? undefined
+      exposureTime = exifData?.ExposureTime ?? undefined
+      iso = exifData?.ISO ?? undefined
+      focalLength = exifData?.FocalLength ?? undefined
     } catch {
       // On any failure fall back to mtime and zero dimensions
       try {
@@ -90,7 +117,7 @@ export async function readExifBatch(
       }
     }
 
-    results.push({ path: filePath, dateTaken, width, height, latitude, longitude })
+    results.push({ path: filePath, dateTaken, width, height, latitude, longitude, make, model, fNumber, exposureTime, iso, focalLength })
   }
 
   return results

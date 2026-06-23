@@ -90,7 +90,13 @@ export function registerIpcHandlers(
       height: result.height,
       thumbGenerated: false,
       latitude: result.latitude,
-      longitude: result.longitude
+      longitude: result.longitude,
+      make: result.make,
+      model: result.model,
+      fNumber: result.fNumber,
+      exposureTime: result.exposureTime,
+      iso: result.iso,
+      focalLength: result.focalLength
     }))
 
     await indexer.addPhotos(photos)

@@ -20,6 +20,12 @@ export interface Photo {
   thumbGenerated: boolean
   latitude?: number
   longitude?: number
+  make?: string
+  model?: string
+  fNumber?: number
+  exposureTime?: number
+  iso?: number
+  focalLength?: number
   favorite?: boolean
   faceScanStatus?: 'pending' | 'done'
   faces?: FaceData[]

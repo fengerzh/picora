@@ -101,6 +101,28 @@ const Viewer: React.FC<ViewerProps> = ({
     }
   }
 
+  // Format EXIF shooting parameters for display
+  const formatExposureTime = (t: number): string => {
+    if (t >= 1) return `${t}s`
+    return `1/${Math.round(1 / t)}s`
+  }
+
+  const exifInfo = React.useMemo(() => {
+    if (!currentPhoto) return null
+    const parts: string[] = []
+    if (currentPhoto.make || currentPhoto.model) {
+      // Clean up make/model: "Apple" + "iPhone 15 Pro" → "iPhone 15 Pro"
+      // "NIKON CORPORATION" + "NIKON D850" → "Nikon D850"
+      const m = currentPhoto.model || currentPhoto.make || ''
+      parts.push(m.replace(/corporation/gi, '').trim())
+    }
+    if (currentPhoto.fNumber != null) parts.push(`f/${currentPhoto.fNumber}`)
+    if (currentPhoto.exposureTime != null) parts.push(formatExposureTime(currentPhoto.exposureTime))
+    if (currentPhoto.iso != null) parts.push(`ISO ${currentPhoto.iso}`)
+    if (currentPhoto.focalLength != null) parts.push(`${Math.round(currentPhoto.focalLength)}mm`)
+    return parts.length > 0 ? parts : null
+  }, [currentPhoto])
+
   if (!currentPhoto) return null
 
   return (
@@ -190,6 +212,13 @@ const Viewer: React.FC<ViewerProps> = ({
             <span className="viewer-date">
               {formatDate(currentPhoto.dateTaken)}
             </span>
+            {exifInfo && (
+              <span className="viewer-exif">
+                {exifInfo.map((item, i) => (
+                  <span key={i} className="viewer-exif-item">{item}</span>
+                ))}
+              </span>
+            )}
             <span className="viewer-counter">
               {currentIndex + 1} / {photos.length}
             </span>
