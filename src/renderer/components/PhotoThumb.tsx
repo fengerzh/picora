@@ -84,14 +84,23 @@ const PhotoThumb: React.FC<PhotoThumbProps> = ({
           </svg>
         </div>
       ) : thumbPath ? (
-        <img
-          src={`picora-asset://localhost/${thumbPath.replace(/\\/g, '/').replace(/^\//, '')}`}
-          alt=""
-          className={`thumb-image ${loaded ? 'loaded' : ''}`}
-          onLoad={handleImageLoad}
-          onError={() => setError(true)}
-          draggable={false}
-        />
+        <>
+          <img
+            src={`picora-asset://localhost/${thumbPath.replace(/\\/g, '/').replace(/^\//, '')}`}
+            alt=""
+            className="thumb-image-blur"
+            aria-hidden={true}
+            draggable={false}
+          />
+          <img
+            src={`picora-asset://localhost/${thumbPath.replace(/\\/g, '/').replace(/^\//, '')}`}
+            alt=""
+            className={`thumb-image ${loaded ? 'loaded' : ''}`}
+            onLoad={handleImageLoad}
+            onError={() => setError(true)}
+            draggable={false}
+          />
+        </>
       ) : (
         <div className="thumb-loading">
           <div className="thumb-loading-spinner" />
