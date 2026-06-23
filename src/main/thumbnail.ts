@@ -15,7 +15,7 @@ export async function generateThumbnail(
   try {
     await sharp(inputPath)
       .rotate() // auto-orient based on EXIF
-      .resize(size, size, { fit: 'cover' })
+      .resize(size, size, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
       .toFile(outputPath)
     return true
