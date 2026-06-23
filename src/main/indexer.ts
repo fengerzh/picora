@@ -87,12 +87,32 @@ export class PhotoIndexer {
   }
 
   /**
-   * Adds new photos to the index (skips duplicates by id), then saves.
+   * Adds new photos to the index and updates existing entries with fresh scan data.
+   * This ensures re-scanning populates newly-added EXIF fields (e.g. camera info).
    */
   async addPhotos(photos: Photo[]): Promise<void> {
-    const existingIds = new Set(this.index.photos.map((p) => p.id))
-    const newPhotos = photos.filter((p) => !existingIds.has(p.id))
-    this.index.photos.push(...newPhotos)
+    const existingMap = new Map(this.index.photos.map((p) => [p.id, p]))
+
+    for (const incoming of photos) {
+      const existing = existingMap.get(incoming.id)
+      if (existing) {
+        // Merge: update fields that may have changed or been newly extracted
+        existing.dateTaken = incoming.dateTaken
+        existing.width = incoming.width
+        existing.height = incoming.height
+        existing.latitude = incoming.latitude
+        existing.longitude = incoming.longitude
+        existing.make = incoming.make
+        existing.model = incoming.model
+        existing.fNumber = incoming.fNumber
+        existing.exposureTime = incoming.exposureTime
+        existing.iso = incoming.iso
+        existing.focalLength = incoming.focalLength
+      } else {
+        this.index.photos.push(incoming)
+      }
+    }
+
     this.index.lastScan = new Date().toISOString()
     await this.save(this.index)
   }
