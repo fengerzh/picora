@@ -88,14 +88,11 @@ const DOT_ICON = L.divIcon({
   iconAnchor: [6, 6]
 })
 
-interface MapPhoto extends Photo {
-  thumbUrl: string | null
-}
-
 const MapView: React.FC<MapViewProps> = ({ onPhotoClick }) => {
-  const [mapPhotos, setMapPhotos] = useState<MapPhoto[]>([])
+  const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
-  const [thumbProgress, setThumbProgress] = useState('')
+  // Map of photoId → thumbnail URL (populated progressively)
+  const [thumbUrls, setThumbUrls] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
     let cancelled = false
@@ -103,26 +100,28 @@ const MapView: React.FC<MapViewProps> = ({ onPhotoClick }) => {
       setLoading(true)
       try {
         const result = await window.picora.getPhotosWithLocation()
+        if (cancelled) return
+        // Show map immediately with all photos (as dot markers)
+        setPhotos(result)
+        setLoading(false)
 
-        // Generate thumbnails on demand via getThumbnailPath (same as PhotoGrid)
-        const enriched: MapPhoto[] = []
+        // Generate thumbnails in background, progressively updating
+        const newUrls = new Map<string, string>()
+        const BATCH = 5 // update UI every 5 thumbnails
         for (let i = 0; i < result.length; i++) {
           if (cancelled) break
           const photo = result[i]
           const thumbPath = await window.picora.getThumbnailPath(photo.id)
-          const thumbUrl = thumbPath
-            ? `picora-asset://localhost${thumbPath}`
-            : null
-          enriched.push({ ...photo, thumbUrl })
-          // Update progress every 10 photos
-          if (i % 10 === 0) {
-            setThumbProgress(`正在生成缩略图 ${i + 1}/${result.length}`)
+          if (thumbPath) {
+            newUrls.set(photo.id, `picora-asset://localhost${thumbPath}`)
+          }
+          // Batch UI updates
+          if (newUrls.size % BATCH === 0 || i === result.length - 1) {
+            setThumbUrls(new Map(newUrls))
           }
         }
-        if (!cancelled) setMapPhotos(enriched)
       } catch (err) {
         console.error('加载地图照片失败：', err)
-      } finally {
         if (!cancelled) setLoading(false)
       }
     }
@@ -133,22 +132,22 @@ const MapView: React.FC<MapViewProps> = ({ onPhotoClick }) => {
   // Convert WGS-84 (EXIF GPS) → GCJ-02 (AMap coordinate system)
   const positions = useMemo(
     () =>
-      mapPhotos
+      photos
         .filter((p) => p.latitude != null && p.longitude != null)
         .map((p) => wgs84ToGcj02(p.latitude!, p.longitude!) as L.LatLngExpression),
-    [mapPhotos]
+    [photos]
   )
 
   if (loading) {
     return (
       <div className="map-loading">
         <div className="loading-spinner" />
-        <p>{thumbProgress || '正在加载地图数据…'}</p>
+        <p>正在加载地图数据…</p>
       </div>
     )
   }
 
-  if (mapPhotos.length === 0) {
+  if (photos.length === 0) {
     return (
       <div className="map-empty">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -180,14 +179,15 @@ const MapView: React.FC<MapViewProps> = ({ onPhotoClick }) => {
           subdomains={['1', '2', '3', '4']}
         />
         <FitBounds positions={positions} />
-        {mapPhotos.map((photo) => {
+        {photos.map((photo) => {
           if (photo.latitude == null || photo.longitude == null) return null
           const [gcjLat, gcjLng] = wgs84ToGcj02(photo.latitude, photo.longitude)
+          const url = thumbUrls.get(photo.id)
           return (
             <Marker
               key={photo.id}
               position={[gcjLat, gcjLng]}
-              icon={photo.thumbUrl ? createThumbIcon(photo.thumbUrl) : DOT_ICON}
+              icon={url ? createThumbIcon(url) : DOT_ICON}
               eventHandlers={{
                 click: () => onPhotoClick(photo)
               }}
