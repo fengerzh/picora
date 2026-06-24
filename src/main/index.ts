@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, net } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs/promises'
 import { ConfigManager } from './config'
@@ -138,12 +138,13 @@ app.whenReady().then(async () => {
   // Register picora-asset:// protocol to serve local files
   // URL format: picora-asset://localhost/C:/path/to/file.jpg (Windows)
   //             picora-asset://localhost/path/to/file.jpg (macOS/Linux)
-  protocol.handle('picora-asset', (request) => {
+  // Uses fs.readFile + Response instead of net.fetch('file://...') for
+  // cross-platform reliability (net.fetch with file:// is flaky on Windows).
+  protocol.handle('picora-asset', async (request) => {
     const url = new URL(request.url)
     let filePath = decodeURIComponent(url.pathname)
 
     // On Windows, pathname for C:\... becomes /C:/...
-    // Also handle backslashes that may appear in encoded paths
     filePath = filePath.replace(/\\/g, '/')
 
     if (process.platform === 'win32') {
@@ -151,10 +152,31 @@ app.whenReady().then(async () => {
       if (/^\/[A-Za-z]:/.test(filePath)) {
         filePath = filePath.slice(1)
       }
-      return net.fetch('file:///' + filePath)
     }
 
-    return net.fetch('file://' + filePath)
+    try {
+      const ext = path.extname(filePath).toLowerCase()
+      const mimeTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.webp': 'image/webp',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.heic': 'image/heic',
+        '.heif': 'image/heif',
+        '.avif': 'image/avif',
+        '.tiff': 'image/tiff',
+        '.tif': 'image/tiff',
+        '.svg': 'image/svg+xml'
+      }
+      const data = await fs.readFile(filePath)
+      return new Response(new Uint8Array(data), {
+        headers: { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' }
+      })
+    } catch (err) {
+      return new Response('Not Found', { status: 404 })
+    }
   })
 
   // Initialize managers
