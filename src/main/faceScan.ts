@@ -253,6 +253,8 @@ export function buildPersons(
     for (const member of members) {
       const photo = updatedPhotos.find((p) => p.id === member.photoId)
       if (photo?.faces?.[member.faceIndex]) {
+        // Skip if this photo was manually removed from this person
+        if (photo.removedFromPersonIds?.includes(person.id)) continue
         photo.faces[member.faceIndex].personId = person.id
       }
     }

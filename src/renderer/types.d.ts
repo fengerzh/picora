@@ -76,6 +76,7 @@ interface Photo {
   favorite?: boolean
   faceScanStatus?: 'pending' | 'done'
   faces?: FaceData[]
+  removedFromPersonIds?: string[]
 }
 
 declare global {

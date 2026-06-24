@@ -29,6 +29,7 @@ export interface Photo {
   favorite?: boolean
   faceScanStatus?: 'pending' | 'done'
   faces?: FaceData[]
+  removedFromPersonIds?: string[]
 }
 
 export interface Person {
@@ -385,6 +386,12 @@ export class PhotoIndexer {
     }
 
     if (removed) {
+      // Record manual removal so re-scanning won't reassign this photo to this person
+      if (!photo.removedFromPersonIds) photo.removedFromPersonIds = []
+      if (!photo.removedFromPersonIds.includes(personId)) {
+        photo.removedFromPersonIds.push(personId)
+      }
+
       // Recalculate person's face count
       const person = this.index.persons.find((p) => p.id === personId)
       if (person) {
