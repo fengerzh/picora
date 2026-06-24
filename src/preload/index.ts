@@ -51,6 +51,8 @@ contextBridge.exposeInMainWorld('picora', {
     ipcRenderer.invoke('person:rename', personId, name),
   getPhotosByPerson: (personId: string) =>
     ipcRenderer.invoke('person:photos', personId),
+  removePhotoFromPerson: (personId: string, photoId: string) =>
+    ipcRenderer.invoke('person:removePhoto', personId, photoId),
 
   // Events
   onPhotosUpdated: (callback: () => void) => {

@@ -47,6 +47,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   const [showMap, setShowMap] = React.useState(false)
   const [persons, setPersons] = React.useState<Person[]>([])
   const [personPhotos, setPersonPhotos] = React.useState<Photo[] | null>(null)
+  const [currentPersonId, setCurrentPersonId] = React.useState<string | null>(null)
+  const [removeMode, setRemoveMode] = React.useState(false)
   const [faceScanStatus, setFaceScanStatus] = React.useState<{ scanned: number; total: number; running: boolean } | null>(null)
 
   // Load favorite IDs on mount and when photos change
@@ -164,12 +166,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
   const handlePersonClick = React.useCallback(async (personId: string) => {
     try {
+      setCurrentPersonId(personId)
+      setRemoveMode(false)
       const photos = await window.picora.getPhotosByPerson(personId)
       setPersonPhotos(photos)
     } catch (err) {
       console.error('加载人物照片失败：', err)
     }
   }, [])
+
+  const handleRemoveFromPerson = React.useCallback(async (photoId: string) => {
+    if (!currentPersonId) return
+    try {
+      await window.picora.removePhotoFromPerson(currentPersonId, photoId)
+      // Refresh the photo list for this person
+      const photos = await window.picora.getPhotosByPerson(currentPersonId)
+      setPersonPhotos(photos)
+      // Refresh person list (face count changed)
+      await loadPersons()
+    } catch (err) {
+      console.error('移除照片失败：', err)
+    }
+  }, [currentPersonId, loadPersons])
 
   const handleRenamePerson = React.useCallback(async (personId: string, name: string) => {
     try {
@@ -428,15 +446,49 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           ) : showMap ? (
             <MapView onPhotoClick={onPhotoClick} />
           ) : showPersons && personPhotos ? (
-            <PhotoGrid
-              photos={personPhotos}
-              onPhotoClick={onPhotoClick}
-              onActiveMonthChange={() => {}}
-              scrollTarget={null}
-              onScrollComplete={() => {}}
-              onToggleFavorite={handleToggleFavorite}
-              onPhotosDeleted={onRefresh}
-            />
+            <div className="person-photos-view">
+              <div className="person-photos-toolbar">
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    setPersonPhotos(null)
+                    setCurrentPersonId(null)
+                    setRemoveMode(false)
+                  }}
+                >
+                  ← 返回
+                </button>
+                <span className="person-photos-title">
+                  {persons.find((p) => p.id === currentPersonId)?.name || '未命名'} — {personPhotos.length} 张照片
+                </span>
+                <button
+                  className={`btn-secondary ${removeMode ? 'btn-danger' : ''}`}
+                  onClick={() => setRemoveMode(!removeMode)}
+                >
+                  {removeMode ? '取消移除' : '移除误标照片'}
+                </button>
+              </div>
+              {removeMode && (
+                <div className="remove-mode-hint">
+                  点击照片可将它从此人物中移除
+                </div>
+              )}
+              <PhotoGrid
+                photos={personPhotos}
+                onPhotoClick={(photo) => {
+                  if (removeMode) {
+                    handleRemoveFromPerson(photo.id)
+                  } else {
+                    onPhotoClick(photo)
+                  }
+                }}
+                onActiveMonthChange={() => {}}
+                scrollTarget={null}
+                onScrollComplete={() => {}}
+                onToggleFavorite={handleToggleFavorite}
+                onPhotosDeleted={onRefresh}
+              />
+            </div>
           ) : showPersons ? (
             <div className="person-view">
               <div className="person-view-header">

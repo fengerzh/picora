@@ -37,6 +37,7 @@ interface PicoraAPI {
   getPersons(): Promise<Person[]>
   renamePerson(personId: string, name: string): Promise<boolean>
   getPhotosByPerson(personId: string): Promise<Photo[]>
+  removePhotoFromPerson(personId: string, photoId: string): Promise<boolean>
   onPhotosUpdated(callback: () => void): () => void
   onStartupScan(callback: () => void): () => void
 }

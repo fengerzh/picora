@@ -338,4 +338,9 @@ export function registerIpcHandlers(
   ipcMain.handle('person:photos', async (_event, personId: string) => {
     return indexer.getPhotosByPerson(personId)
   })
+
+  // Remove a photo from a person
+  ipcMain.handle('person:removePhoto', async (_event, personId: string, photoId: string) => {
+    return indexer.removePhotoFromPerson(photoId, personId)
+  })
 }

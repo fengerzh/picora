@@ -367,4 +367,39 @@ export class PhotoIndexer {
         (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime()
       )
   }
+
+  /**
+   * Removes a photo from a person by clearing the personId on matching faces.
+   * Updates the person's faceCount accordingly.
+   */
+  async removePhotoFromPerson(photoId: string, personId: string): Promise<boolean> {
+    const photo = this.index.photos.find((p) => p.id === photoId)
+    if (!photo?.faces) return false
+
+    let removed = false
+    for (const face of photo.faces) {
+      if (face.personId === personId) {
+        face.personId = undefined
+        removed = true
+      }
+    }
+
+    if (removed) {
+      // Recalculate person's face count
+      const person = this.index.persons.find((p) => p.id === personId)
+      if (person) {
+        const count = this.index.photos.reduce((sum, p) => {
+          return sum + (p.faces?.filter((f) => f.personId === personId).length || 0)
+        }, 0)
+        person.faceCount = count
+        // If no more photos for this person, remove the person entirely
+        if (count === 0) {
+          this.index.persons = this.index.persons.filter((p) => p.id !== personId)
+        }
+      }
+      await this.save(this.index)
+    }
+
+    return removed
+  }
 }
