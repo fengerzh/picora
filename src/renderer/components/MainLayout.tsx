@@ -140,6 +140,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     }
   }, [])
 
+  // Load persons on mount so sidebar count is correct from the start
+  React.useEffect(() => {
+    loadPersons()
+  }, [loadPersons])
+
   const handleShowPersons = React.useCallback(async () => {
     setShowFavoritesOnly(false)
     setShowMap(false)
