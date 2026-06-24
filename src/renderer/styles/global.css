@@ -726,6 +726,29 @@ button:disabled {
   color: #111827;
   text-align: center;
 }
+.person-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.person-rename-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  padding: 4px;
+  min-height: 32px;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.person-rename-btn:hover {
+  background: #e5e7eb;
+  color: #2563eb;
+}
 .person-name-edit input {
   font-size: 17px;
   padding: 4px 8px;
