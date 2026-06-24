@@ -482,12 +482,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                   <div className="face-scan-buttons">
                     <button className="btn-primary" onClick={handleStartFaceScan}>
                       {faceScanStatus && faceScanStatus.scanned > 0
-                        ? `继续扫描 (${faceScanStatus.scanned}/${faceScanStatus.total})`
-                        : '开始人脸扫描'}
+                        ? `扫描人脸 (${faceScanStatus.scanned}/${faceScanStatus.total})`
+                        : '扫描人脸'}
                     </button>
                     {faceScanStatus && faceScanStatus.scanned > 0 && (
-                      <button className="btn-secondary" onClick={handleResetFaceScan}>
-                        重新扫描
+                      <button className="btn-danger" onClick={handleResetFaceScan}>
+                        清除并重扫
                       </button>
                     )}
                   </div>
