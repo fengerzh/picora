@@ -128,22 +128,7 @@ export function registerIpcHandlers(
   })
 
   ipcMain.handle('photos:byMonth', async () => {
-    const groups = indexer.getByMonth()
-    // Transform Record<string, Photo[]> → MonthData[] expected by renderer
-    const yearMap: Record<number, Record<number, number>> = {}
-    for (const [key, photos] of Object.entries(groups)) {
-      const [y, m] = key.split('-').map(Number)
-      if (!yearMap[y]) yearMap[y] = {}
-      yearMap[y][m] = photos.length
-    }
-    return Object.entries(yearMap)
-      .map(([year, months]) => ({
-        year: Number(year),
-        months: Object.entries(months)
-          .map(([month, count]) => ({ month: Number(month), count }))
-          .sort((a, b) => b.month - a.month) // newest month first
-      }))
-      .sort((a, b) => b.year - a.year) // newest year first
+    return indexer.getMonthCounts()
   })
 
   // ─── Thumbnail ───────────────────────────────────────────────────────────────

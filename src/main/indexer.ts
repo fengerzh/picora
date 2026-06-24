@@ -59,9 +59,15 @@ function emptyIndex(): PhotoIndex {
 export class PhotoIndexer {
   private readonly indexPath: string
   private index: PhotoIndex = emptyIndex()
+  private sortedCache: Photo[] | null = null
 
   constructor(userDataPath: string) {
     this.indexPath = path.join(userDataPath, 'photos.json')
+  }
+
+  /** Invalidate the sorted cache — call after any mutation */
+  private invalidateCache(): void {
+    this.sortedCache = null
   }
 
   /**
@@ -74,16 +80,18 @@ export class PhotoIndexer {
     } catch {
       this.index = emptyIndex()
     }
+    this.invalidateCache()
     return this.index
   }
 
   /**
-   * Persists the current index to disk.
+   * Persists the current index to disk (compact JSON for fast I/O).
    */
   async save(index: PhotoIndex): Promise<void> {
     this.index = index
+    this.invalidateCache()
     await fs.mkdir(path.dirname(this.indexPath), { recursive: true })
-    await fs.writeFile(this.indexPath, JSON.stringify(index, null, 2), 'utf-8')
+    await fs.writeFile(this.indexPath, JSON.stringify(index), 'utf-8')
   }
 
   /**
@@ -176,12 +184,40 @@ export class PhotoIndexer {
 
   /**
    * Returns ALL photos sorted by dateTaken descending (no pagination).
-   * Suitable for the timeline view where the virtual scroll handles rendering.
+   * Uses an in-memory cache to avoid re-sorting on every call.
+   * Strips face embedding data to reduce IPC serialization overhead.
    */
   getAllPhotos(): Photo[] {
-    return [...this.index.photos].sort(
-      (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime()
-    )
+    if (!this.sortedCache) {
+      this.sortedCache = [...this.index.photos].sort(
+        (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime()
+      )
+    }
+    // Return shallow copies without face embeddings (heavy, not needed for display)
+    return this.sortedCache.map(({ faces, ...rest }) => rest as Photo)
+  }
+
+  /**
+   * Returns lightweight month counts: [{year, months: [{month, count}]}].
+   * Much faster than getByMonth() which returns full photo arrays.
+   */
+  getMonthCounts(): Array<{ year: number; months: Array<{ month: number; count: number }> }> {
+    const counts: Record<number, Record<number, number>> = {}
+    for (const photo of this.index.photos) {
+      const d = new Date(photo.dateTaken)
+      const y = d.getFullYear()
+      const m = d.getMonth() + 1
+      if (!counts[y]) counts[y] = {}
+      counts[y][m] = (counts[y][m] || 0) + 1
+    }
+    return Object.entries(counts)
+      .map(([year, months]) => ({
+        year: Number(year),
+        months: Object.entries(months)
+          .map(([month, count]) => ({ month: Number(month), count }))
+          .sort((a, b) => b.month - a.month)
+      }))
+      .sort((a, b) => b.year - a.year)
   }
 
   /**

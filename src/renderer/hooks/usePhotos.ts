@@ -17,6 +17,26 @@ export interface UsePhotosReturn {
   clearScrollTarget: () => void
 }
 
+/** Compute year/month/count groups locally from a photo array */
+function computeMonthData(photos: Photo[]): MonthData[] {
+  const counts: Record<number, Record<number, number>> = {}
+  for (const photo of photos) {
+    const d = new Date(photo.dateTaken)
+    const y = d.getFullYear()
+    const m = d.getMonth() + 1
+    if (!counts[y]) counts[y] = {}
+    counts[y][m] = (counts[y][m] || 0) + 1
+  }
+  return Object.entries(counts)
+    .map(([year, months]) => ({
+      year: Number(year),
+      months: Object.entries(months)
+        .map(([month, count]) => ({ month: Number(month), count }))
+        .sort((a, b) => b.month - a.month)
+    }))
+    .sort((a, b) => b.year - a.year)
+}
+
 export function usePhotos(): UsePhotosReturn {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -27,25 +47,14 @@ export function usePhotos(): UsePhotosReturn {
     month: number
   } | null>(null)
 
-  const loadByMonth = useCallback(async () => {
-    try {
-      const data = await window.picora.getPhotosByMonth()
-      setPhotosByMonth(data)
-    } catch (err) {
-      console.error('加载月份数据失败：', err)
-    }
-  }, [])
-
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const [allPhotos, monthData] = await Promise.all([
-        window.picora.getAllPhotos(),
-        window.picora.getPhotosByMonth()
-      ])
+      // Single IPC call — compute month counts locally from the result
+      const allPhotos = await window.picora.getAllPhotos()
       setPhotos(allPhotos)
       setTotalCount(allPhotos.length)
-      setPhotosByMonth(monthData)
+      setPhotosByMonth(computeMonthData(allPhotos))
     } catch (err) {
       console.error('刷新数据失败：', err)
     } finally {
@@ -58,11 +67,13 @@ export function usePhotos(): UsePhotosReturn {
       try {
         const ok = await window.picora.deletePhoto(id)
         if (ok) {
-          // Remove from local state immediately
-          setPhotos((prev) => prev.filter((p) => p.id !== id))
+          // Update local state immediately (no extra IPC call)
+          setPhotos((prev) => {
+            const next = prev.filter((p) => p.id !== id)
+            setPhotosByMonth(computeMonthData(next))
+            return next
+          })
           setTotalCount((prev) => prev - 1)
-          // Refresh month data in background
-          loadByMonth()
         }
         return ok
       } catch (err) {
@@ -70,7 +81,7 @@ export function usePhotos(): UsePhotosReturn {
         return false
       }
     },
-    [loadByMonth]
+    []
   )
 
   const scrollToMonth = useCallback((year: number, month: number) => {
