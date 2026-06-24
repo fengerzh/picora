@@ -719,6 +719,17 @@ button:disabled {
   font-weight: 700;
   color: #fff;
   margin-bottom: 12px;
+  overflow: hidden;
+}
+.person-avatar-photo {
+  background: none;
+  padding: 0;
+}
+.person-avatar-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 .person-name {
   font-size: 17px;

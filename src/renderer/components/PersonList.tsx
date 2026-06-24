@@ -6,6 +6,43 @@ interface PersonListProps {
   onRenamePerson: (personId: string, name: string) => void
 }
 
+/** Circular avatar showing the person's representative photo, or a text fallback */
+const PersonAvatar: React.FC<{ person: Person; fallbackText: string }> = ({
+  person,
+  fallbackText
+}) => {
+  const [thumbUrl, setThumbUrl] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    let cancelled = false
+    if (person.representativePhotoId) {
+      window.picora
+        .getThumbnailPath(person.representativePhotoId)
+        .then((path) => {
+          if (!cancelled && path) {
+            setThumbUrl(`picora-asset://localhost${path}`)
+          }
+        })
+        .catch(() => {})
+    }
+    return () => { cancelled = true }
+  }, [person.representativePhotoId])
+
+  if (thumbUrl) {
+    return (
+      <div className="person-avatar person-avatar-photo">
+        <img src={thumbUrl} alt="" draggable={false} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="person-avatar">
+      <span>{fallbackText}</span>
+    </div>
+  )
+}
+
 const PersonList: React.FC<PersonListProps> = ({
   persons,
   onPersonClick,
@@ -45,9 +82,10 @@ const PersonList: React.FC<PersonListProps> = ({
           className="person-card"
           onClick={() => editingId !== person.id && onPersonClick(person.id)}
         >
-          <div className="person-avatar">
-            <span>{person.name ? person.name[0] : `人${idx + 1}`}</span>
-          </div>
+          <PersonAvatar
+            person={person}
+            fallbackText={person.name ? person.name[0] : `人${idx + 1}`}
+          />
           {editingId === person.id ? (
             <div className="person-name-edit">
               <input
